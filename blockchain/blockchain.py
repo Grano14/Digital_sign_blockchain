@@ -30,7 +30,7 @@ class Blockchain:
             if curr.previous_hash != prev.hash:
                 return False
 
-            calculated_hash = proof_of_work(curr, self.difficulty)
+            calculated_hash = proof_of_work(curr)
             if curr.hash != calculated_hash:
                 return False
 

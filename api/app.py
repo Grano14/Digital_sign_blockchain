@@ -1,32 +1,71 @@
 from fastapi import FastAPI, UploadFile, File
-import hashlib
+import hashlib, base64, json
+from fastapi.responses import FileResponse
+import tempfile
+import zipfile
 
 from blockchain.blockchain import Blockchain
+from cryptography.hazmat.primitives import serialization, hashes
+from cryptography.hazmat.primitives.asymmetric import padding
+
 
 app = FastAPI()
 blockchain = Blockchain()
 
-def hash_file(file_bytes):
-    return hashlib.sha256(file_bytes).hexdigest()
-
 @app.get("/")
 def root():
-    return {"message": "Blockchain Notary Service"}
+    return {"message": "Blockchain Digital Sign Service"}
 
 @app.post("/notarize")
-async def notarize(file: UploadFile):
-    file_bytes = await file.read()
-    file_hash = hash_file(file_bytes)
-    block = blockchain.add_block(file_hash)
-    return {"message": "File notarized", "hash": file_hash, "block": block.to_dict()}
+async def notarize(data: dict):
+    block = blockchain.add_block(data)
+    return {"message": "File notarized", "hash": data.get("file_hash"), "signature": data.get("signature"), "block": block.to_dict()}
 
 @app.get("/chain")
 def get_chain():
     return [b.to_dict() for b in blockchain.chain]
 
+
 @app.get("/verify/{file_hash}")
 def verify(file_hash: str):
     for block in blockchain.chain:
-        if block.data == file_hash:
-            return {"valid": True, "block": block.to_dict()}
-    return {"valid": False}
+        data = block.data
+
+        if(data == "GENESIS"):
+            continue
+
+        if data.get("file_hash") == file_hash:
+
+            # 1) ricostruisci la chiave pubblica
+            public_key = serialization.load_pem_public_key(
+                data.get("public_key").encode()
+            )
+
+            signature = base64.b64decode(data["signature"])
+
+            # 2) verifica la firma
+            try:
+                public_key.verify(
+                    signature,
+                    file_hash.encode(),
+                    padding.PSS(
+                        mgf=padding.MGF1(hashes.SHA256()),
+                        salt_length=padding.PSS.MAX_LENGTH
+                    ),
+                    hashes.SHA256()
+                )
+            except Exception:
+                return {"valid": False, "reason": "Invalid signature"}
+
+            # 3) opzionale: verifica integrità blockchain
+            if not blockchain.is_valid():
+                return {"valid": False, "reason": "Blockchain corrupted"}
+
+            return {
+                "valid": True,
+                "signed_by_public_key": data["public_key"],
+                "block": block.to_dict()
+            }
+
+    return {"valid": False, "reason": "Hash not found"}
+
