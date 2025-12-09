@@ -14,7 +14,7 @@ This project combines **local signing** with a **FastAPI blockchain server** for
   - [Generate Keys](#generate-keys)  
   - [Sign a File](#sign-a-file)  
   - [Validate a File](#validate-a-file)  
-- [API Reference](#api-reference)  
+ 
 
 
 ---
@@ -37,13 +37,17 @@ All signing is done **locally** for security, while the blockchain guarantees **
 
 ---
 
+## Configuration
+
+THe conf.json file is used to configure the ip and port uf the server, it is set to http://localhost:8000, if you change the port of the server modify this file.
+
 ## Installation
 
-1. Clone the repository:
+Run the following command to install correctly the repository
 
 ```bash
 
-python -m venv venv
+python3 -m venv venv
 source venv/bin/activate  # Linux 
 mkdir src
 cd src
@@ -53,11 +57,31 @@ pip install -r requirements.txt
 
 ## Usage
 
-The main client script is `local_script.py`. It supports the following command-line options:
+Run the server using:
+```bash
+uvicorn api.app:app --reload
+```
+
+The main client script is `client.py`. It supports the following command-line options:
 
 ### Generate RSA Keys
 
 Generate a new 2048-bit RSA key pair (private and public keys):
 
 ```bash
-python local_script.py -gen
+python3 client.py -gen
+```
+
+## Sign a file
+
+Sign a file using your private key. This computes the SHA-256 hash, signs it, saves a signature.json file, and uploads the data to the blockchain.
+```bash
+python3 client.py -sign <file> <private_key.pem>
+```
+
+## Validate a File
+
+Validate a file against the blockchain. This computes the file's hash, queries the blockchain, and checks the signature.
+```bash
+python3 client.py -validate <file> <signature.json>
+```
