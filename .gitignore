@@ -1,0 +1,5 @@
+# ignore the generate keys
+/client/*.pem
+# ignore pycache directory
+/server/api/__pycache__
+/server/blockchain/__pycache__

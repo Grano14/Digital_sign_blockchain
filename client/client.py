@@ -1,4 +1,4 @@
-import sys, hashlib, base64, pathlib, json
+import sys, hashlib, base64, pathlib, json, requests
 from cryptography.hazmat.primitives.asymmetric import rsa, padding
 from cryptography.hazmat.primitives import hashes, serialization
 
@@ -14,11 +14,24 @@ else:
         exit_control = 0
     elif(sys.argv[1] == "-h" and len(sys.argv) == 2):
         exit_control = 0
+    elif(sys.argv[1] == "-validate" and len(sys.argv) == 3):
+        exit_control = 0
     else:
         print("Argument error. try to run 'local_script.py -h' for help.")
 
 if(exit_control):
     exit()
+
+# Function to calculate hash of the file
+def sha256_bytes(data: bytes) -> str:
+    return hashlib.sha256(data).hexdigest()
+
+# Get api url from configuration file
+api_url = ""
+with open("conf.json", "r") as f:
+    data = f.read()
+    data = json.loads(data)
+    api_url = data.get("api_url")
 
 # Selected '-gen' param, generation of the keys
 if(sys.argv[1] == "-gen"):
@@ -71,10 +84,6 @@ elif(sys.argv[1] == "-sign"):
             format=serialization.PublicFormat.SubjectPublicKeyInfo
         ).decode()
 
-    # Function to calculate hash of the file
-    def sha256_bytes(data: bytes) -> str:
-        return hashlib.sha256(data).hexdigest()
-
     # Read the content of the file with the "rb" option
     with open(file_loaded, "rb") as f:
         data = f.read()
@@ -108,7 +117,7 @@ elif(sys.argv[1] == "-sign"):
 
     # Crea JSON con tutti i dati 
     result = {
-        "file_name": file_loaded,
+        #"file_name": file_loaded,
         "file_hash": hash_file,
         "signature": sign,
         "public_key": public_key
@@ -118,24 +127,45 @@ elif(sys.argv[1] == "-sign"):
     with open(json_path, "w") as f:
         json.dump(result, f, indent=4)
 
+    # Send data to the blockchain
+    url = api_url + "/notarize"
+    response = requests.post(url, json=result)
+    
+    # Checking if the signature is correctly saved in the blockchain
+    if response.status_code == 200:
+        print("Signature correctly saved in the blockchain")
+    else:
+        print("Error during the upload of the signature in the blockchain:", response.status_code)
+
+
     print(f"File firmato correttamente! Output salvato in '{json_path}'")
 
-    # Function to verify the validity of a sign
-    def verify_signature(public_key_pem: str, signature_b64: str, file_hash: str) -> bool:
-        public_key = serialization.load_pem_public_key(public_key_pem.encode())
+# The user selected the "-validate" param
+elif(sys.argv[1] == "-validate"):
 
-        try:
-            public_key.verify(
-                base64.b64decode(signature_b64),
-                file_hash.encode(),
-                padding.PSS(
-                    mgf=padding.MGF1(hashes.SHA256()),
-                    salt_length=padding.PSS.MAX_LENGTH
-                ),
-                hashes.SHA256()
-            )
-            return True
-        except Exception:
-            return False
+    # Get the file to validate
+    file_path = sys.argv[2]
 
-    print(verify_signature(public_key, sign, hash_file))
+    # Read the content of the file with the "rb" option
+    with open(file_path, "rb") as f:
+        data = f.read()
+
+    # Calculate the hash of the file
+    hash_file = sha256_bytes(data)
+
+    # Send hash to the blockchain to validate it
+    url = api_url + "/verify/" + hash_file
+    response = requests.get(url)
+
+    # Checking if the signature is correctly saved in the blockchain
+    if response.status_code == 200:
+        print("File validation completed")
+        if(response.json().get("valid")):
+            print("The file signature is valid")
+        else:
+            print(response.json().get("reason"))
+    else:
+        print("Error during the validation of the signature in the blockchain:", response.status_code)
+
+
+

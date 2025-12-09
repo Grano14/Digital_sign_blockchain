@@ -1,6 +1,5 @@
 from fastapi import FastAPI, UploadFile, File
 import hashlib, base64, json
-from fastapi.responses import FileResponse
 import tempfile
 import zipfile
 
@@ -25,6 +24,19 @@ async def notarize(data: dict):
 def get_chain():
     return [b.to_dict() for b in blockchain.chain]
 
+@app.get("/signature/{hash}")
+def get_signature(hash: str):
+    for block in blockchain.chain:
+        data = block.data
+
+        if(data == "GENESIS"):
+            continue
+
+        # If find the file hash return his signature
+        if data.get("file_hash") == hash:
+            return {"found": True, "signature": data.get("signature")}
+        else:
+            return {"found": False, "reason": "Hash not found"}
 
 @app.get("/verify/{file_hash}")
 def verify(file_hash: str):
@@ -68,4 +80,3 @@ def verify(file_hash: str):
             }
 
     return {"valid": False, "reason": "Hash not found"}
-
