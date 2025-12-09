@@ -1,7 +1,7 @@
 # Blockchain Digital Signature System
 
 A Python-based system for securely notarizing and verifying files using digital signatures on a private blockchain.  
-This project combines **local signing** with a **FastAPI blockchain server** for immutably storing file hashes and signatures.
+This project combines **digital signing** with a **blockchain** for immutably storing file hashes and signatures.
 
 ---
 
@@ -28,7 +28,7 @@ This project allows users to:
 3. **Send file hash, signature, and public key** to the blockchain.
 4. **Verify file authenticity** using the blockchain and digital signatures.
 
-All signing is done **locally** for security, while the blockchain guarantees **immutability** and **traceability.
+All signing is done **locally** for security, while the blockchain guarantees **immutability** and **traceability**.
 
 ---
 
