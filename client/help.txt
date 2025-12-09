@@ -1,0 +1,58 @@
+------------------------------------------------------------
+ local_script.py - Digital Signature & Blockchain Client
+------------------------------------------------------------
+
+USAGE:
+    python local_script.py [OPTION] <parameters>
+
+AVAILABLE OPTIONS:
+
+  -h
+      Show this help manual.
+
+  -gen
+      Generate a new RSA key pair (2048-bit).
+      Two files will be created in the current directory:
+          - private_key.pem   (private key)
+          - public_key.pem    (public key)
+
+  -sign <file> <private_key.pem>
+      Sign the specified file using the provided private key.
+      Operations performed:
+          1. Compute SHA-256 hash of the file
+          2. Digitally sign the hash
+          3. Create a "signature.json" file containing:
+                 - file_hash
+                 - signature (Base64)
+                 - public_key
+          4. Automatically send the signature data to the blockchain API
+
+      Required parameters:
+          <file>               Path to the file to sign
+          <private_key.pem>    Private key used for signing
+
+  -validate <file>
+      Validate a file by checking its signature stored on the blockchain.
+      Operations performed:
+          1. Compute SHA-256 hash of the file
+          2. Query the blockchain API to search for this hash
+          3. Verify the signature using the stored public key
+
+      Outputs:
+          - “The file signature is valid”   → signature is authentic
+          - A detailed error reason if validation fails
+
+
+CONFIGURATION:
+      The file "conf.json" must contain the blockchain API URL.
+      Example:
+          {
+              "api_url": "http://127.0.0.1:8000"
+          }
+
+NOTES:
+      ● Never share your private key.
+      ● The blockchain stores hash, signature, and public key — immutable.
+      ● Signing always happens locally for maximum security.
+
+------------------------------------------------------------

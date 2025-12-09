@@ -14,7 +14,7 @@ else:
         exit_control = 0
     elif(sys.argv[1] == "-h" and len(sys.argv) == 2):
         exit_control = 0
-    elif(sys.argv[1] == "-validate" and len(sys.argv) == 3):
+    elif(sys.argv[1] == "-validate" and len(sys.argv) == 4):
         exit_control = 0
     else:
         print("Argument error. try to run 'local_script.py -h' for help.")
@@ -143,8 +143,17 @@ elif(sys.argv[1] == "-sign"):
 # The user selected the "-validate" param
 elif(sys.argv[1] == "-validate"):
 
-    # Get the file to validate
+    # Get the file to validate and the signature
     file_path = sys.argv[2]
+    signature_path = sys.argv[3]
+
+    # get sign and public_key from the file
+    signature = ""
+    pub_key = ""
+    with open(signature_path, "r") as f:
+        data = json.loads(f.read())
+        signature = data.get("signature")
+        pub_key = data.get("public_key")
 
     # Read the content of the file with the "rb" option
     with open(file_path, "rb") as f:
@@ -153,19 +162,35 @@ elif(sys.argv[1] == "-validate"):
     # Calculate the hash of the file
     hash_file = sha256_bytes(data)
 
-    # Send hash to the blockchain to validate it
-    url = api_url + "/verify/" + hash_file
+    # Send hash to get the signature stored in the blockchain
+    url = api_url + "/signature/" + hash_file
     response = requests.get(url)
-
-    # Checking if the signature is correctly saved in the blockchain
+    # Checking if the signature saved in the blockchain is the same loaded from the user
     if response.status_code == 200:
-        print("File validation completed")
-        if(response.json().get("valid")):
-            print("The file signature is valid")
+        if(response.json().get("found")):
+            if(response.json().get("signature") == signature and response.json().get("public_key") == pub_key):
+                # Send hash to the blockchain to validate it
+                url = api_url + "/verify/" + hash_file
+                response = requests.get(url)
+
+                # Checking if the signature is correctly saved in the blockchain
+                if response.status_code == 200:
+                    print("File validation completed")
+                    if(response.json().get("valid")):
+                        print("The file signature is valid")
+                    else:
+                        print(response.json().get("reason"))
+                else:
+                    print("Error during the validation of the signature in the blockchain:", response.status_code)
+            else:
+                print("hash found but the signature or the public key do not match")
         else:
             print(response.json().get("reason"))
     else:
         print("Error during the validation of the signature in the blockchain:", response.status_code)
 
-
+# User selected "-h" flag, man is showed
+else: 
+    with open("help.txt", "r") as f:
+        print(f.read())
 

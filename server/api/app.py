@@ -34,7 +34,7 @@ def get_signature(hash: str):
 
         # If find the file hash return his signature
         if data.get("file_hash") == hash:
-            return {"found": True, "signature": data.get("signature")}
+            return {"found": True, "signature": data.get("signature"), "public_key": data.get("public_key")}
         else:
             return {"found": False, "reason": "Hash not found"}
 
